@@ -1,23 +1,8 @@
-$ uv run agentcore invoke '{"prompt": "Hi, I am Jane. I prefer concise responses.", "customer_id": "CUST-123", "session_id": "s-A"}' --session-id s-A-runtime-session-111335-0000000000001
-╭─────────────────────────── customer_support_agent ───────────────────────────╮
-│ Session: s-A-runtime-session-111335-0000000000001                            │
-│ Request ID: 559cf988-5cfd-4ace-b670-c18144d815a8                             │
-│ ARN:                                                                         │
-│ arn:aws:bedrock-agentcore:us-east-1:802732818729:runtime/customer_support_ag │
-│ ent-6eDIfs3G2r                                                               │
-│ Logs: aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --follow                 │
-│       aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --since 1h               │
-│ GenAI Dashboard:                                                             │
-│ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#gen-ai-obser │
-│ vability/agent-core                                                          │
-╰──────────────────────────────────────────────────────────────────────────────╯
+$ uv run agentcore invoke '{"prompt": "Hi, I am Jane. I prefer concise responses.", "customer_id": "CUST-123"}' --session-id fA-session-1790424327-XXXXXXXXXXXXXXXXXXXXX
+[customer_support_agent | session fA-session-1790424327-XXXXXXXXXXXXXXXXXXXXX | ARN/log box trimmed]
 
 Response:
-Hello Jane! I'll keep my responses concise. How can I assist you today? Are you 
-looking for product information, order status, returns, or something else?
+Hello Jane! I have your profile noted: you're a Gold member with 400 loyalty
+points remaining after your recent order. How can I assist you today?
 
 [exit code: 0]

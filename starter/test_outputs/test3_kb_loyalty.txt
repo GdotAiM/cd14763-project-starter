@@ -1,30 +1,16 @@
-$ uv run agentcore invoke '{"prompt": "What are the benefits of the Platinum loyalty tier?", "customer_id": "CUST-123", "session_id": "t3"}' --session-id t3-runtime-session-111335-00000000000001
-╭─────────────────────────── customer_support_agent ───────────────────────────╮
-│ Session: t3-runtime-session-111335-00000000000001                            │
-│ Request ID: 600f7014-6a6b-4c67-8f5a-9e24d14cc69b                             │
-│ ARN:                                                                         │
-│ arn:aws:bedrock-agentcore:us-east-1:802732818729:runtime/customer_support_ag │
-│ ent-6eDIfs3G2r                                                               │
-│ Logs: aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --follow                 │
-│       aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --since 1h               │
-│ GenAI Dashboard:                                                             │
-│ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#gen-ai-obser │
-│ vability/agent-core                                                          │
-╰──────────────────────────────────────────────────────────────────────────────╯
+$ uv run agentcore invoke '{"prompt": "What are the benefits of the Platinum loyalty tier?", "customer_id": "CUST-123"}' --session-id f3-session-1790424327-XXXXXXXXXXXXXXXXXXXXX
+[customer_support_agent | session f3-session-1790424327-XXXXXXXXXXXXXXXXXXXXX | ARN/log box trimmed]
 
 Response:
-Based on the loyalty program information, the **Platinum tier** benefits 
-include:
+Based on the knowledge base, here are the benefits of the Platinum loyalty tier:
 
-- **Free same-day shipping** on eligible orders  
-- **15% discount** on purchases  
-- **Priority customer support**  
+**Platinum Tier Benefits:**
+- Free same-day shipping
+- 15% discount on purchases
+- Priority customer support
 
-The Platinum tier is achieved with **5,000 or more points**. Currently, you have
-4,250 points, so you're close to reaching this tier!
+The Platinum tier requires 5,000 or more points to achieve. Currently, you're a
+Gold member with 400 points remaining after your recent transaction, so you're
+close to reaching Platinum status!
 
 [exit code: 0]

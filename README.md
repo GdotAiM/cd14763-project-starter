@@ -96,28 +96,28 @@ uv run agentcore invoke '{"prompt": "Can you track order ORD-001?", "customer_id
 
 ## Testing & Results
 
-All six scenarios from `starter/SUBMISSION_CHECKLIST.md` were run against the deployed runtime. The full terminal output is in [`starter/test_outputs/`](starter/test_outputs/) and screenshots are in [`starter/screenshots/`](starter/screenshots/).
+All six scenarios from `starter/SUBMISSION_CHECKLIST.md` were run against the deployed runtime (final run after the fixes, commit `a3476be`). The full terminal output is in [`starter/test_outputs/`](starter/test_outputs/) and screenshots are in [`starter/screenshots/`](starter/screenshots/).
 
 | # | Scenario | Capability | Result |
 |---|----------|------------|--------|
 | 1 | Track order ORD-001 | Gateway → API Gateway → `order-tracker` | ✅ Pass |
-| 2 | Refund Kindle Paperwhite (ORD-002) | Gateway → `refund-processor` | ✅ Pass (amount shows `$0`, see below) |
+| 2 | Refund Kindle Paperwhite (ORD-002) | Gateway → `refund-processor` | ✅ Pass |
 | 3 | Platinum tier benefits | Knowledge Base (RAG) | ✅ Pass |
 | 4 | Remember name and preference across sessions | AgentCore Memory | ✅ Pass |
-| 5 | Gold, 4,250 points, $150 standard order | Code Interpreter | ⚠️ Known issue: answered **$95**, correct answer is **$99** |
+| 5 | Gold, 4,250 points, $150 standard order | Code Interpreter | ✅ Pass |
 | 6 | Udacity.com page title | AgentCore Browser | ✅ Pass |
 
-**Score: 5 of 6 pass. Test 5 is a known issue (see [Known Issues](#known-issues)).**
+**Score: 6 of 6 pass.** Tests 2 and 5 were wrong in the first run and pass after the fixes (see [Fixes After First Run](#fixes-after-first-run)).
 
 ### Test 1 — Order Tracking
 
-Returned status **SHIPPED**, tracking number **TRK987654321**, carrier **UPS**, the item and total ($89.99), and an estimated delivery date.
+Returned status **SHIPPED**, tracking number **TRK987654321**, carrier **UPS**, the item and price ($89.99), and an estimated delivery date.
 
 ![Test 1 — Order tracking](starter/screenshots/test1_order_tracking.png)
 
 ### Test 2 — Refund Processing
 
-Called `initiate_refund` and returned a refund ID (`REF-…`), status **APPROVED**, and "Credit appears in 3-5 business days." The response shows **Refund Amount: $0** (see [Known Issues](#known-issues)).
+Approved the refund for ORD-002 (Kindle Paperwhite) for the full order total of **$139.99**, with the credit appearing in 3-5 business days. In the first run the amount showed `$0`.
 
 ![Test 2 — Refund](starter/screenshots/test2_refund.png)
 
@@ -129,14 +129,14 @@ Returned the Platinum benefits from the catalog: **free same-day shipping, 15% d
 
 ### Test 4 — Long-Term Memory
 
-Session `s-A`: "Hi, I am Jane. I prefer concise responses." Then, after waiting for extraction, a **new** session `s-B`: "Do you remember my name and communication preference?" The agent remembered both **Jane** and **concise responses**.
+Session A: "Hi, I am Jane. I prefer concise responses." Then, after waiting for extraction, a **new** session B: "Do you remember my name and communication preference?" The agent answered "Yes, I remember your name is Jane, and you prefer concise responses.", so it recalled both **Jane** and **concise responses**.
 
 ![Test 4a — Memory store](starter/screenshots/test4a_memory_store.png)
 ![Test 4b — Memory recall](starter/screenshots/test4b_memory_recall.png)
 
 ### Test 5 — Loyalty Discount (Code Interpreter)
 
-The agent redeemed 4,000 points ($40), but it took the 10% Gold discount on the original $150 ($15) instead of on the $110 left after points, and answered **$95.00**. The correct answer is **$99.00**. The tool returns that for this input, and a fresh customer gets $99.
+The agent redeemed 4,000 points (**$40**), then took the 10% Gold discount on the **$110** left after points (**$11**), for a final total of **$99.00** ($51 saved, 400 points remaining). In the first run it answered $95 because it applied the Gold discount to the original $150.
 
 ![Test 5 — Loyalty discount](starter/screenshots/test5_discount.png)
 
@@ -160,22 +160,11 @@ uv run agentcore invoke '{"prompt": "I am a Gold member with 4250 points. Calcul
 uv run agentcore invoke '{"prompt": "Go to https://www.udacity.com and tell me the page title.", "customer_id": "CUST-123", "session_id": "t6"}'
 ```
 
-## Known Issues
+## Fixes After First Run
 
-### Test 5: the agent trusted an old remembered total over the tool
+The first run had two wrong answers: Test 2 refunded $0 and Test 5 answered $95 instead of $99. I fixed both, redeployed, and re-ran all six tests; the results above are from that final run.
 
-**Expected result** (`calculate_loyalty_discount`): 4,000 points → $40 off → $110 subtotal → 10% Gold discount ($11) → **$99.00** final, $51 saved, 400 points remaining.
-
-**What happened:** `CUST-123` had already been used in earlier runs. Its long-term memory held an **older, wrong discount total**, and `MemoryHook` added that to the prompt as `Customer Context`. The agent went with the remembered number instead of the tool's result and answered $95. A customer with no memory history gets the correct $99.
-
-**Possible fixes:**
-- **Tell the agent to prefer fresh tool results over remembered numbers.** Add a line to the system prompt saying prices, totals and discounts must come from the current tool call, and memory is only for preferences and background.
-- **Don't save calculated totals to memory.** Filter numeric or transactional results out of `save_support_interaction`, or keep memory strategies to facts and preferences, so stale figures never come back.
-- For a clean re-test, use a new `customer_id` or delete the old memory records for `CUST-123`.
-
-### Test 2: refund amount shows `$0`
-
-In `lambda_schema`, `initiate_refund` requires only `order_id` and `reason`. `amount` is optional, and `refund_processor.py` defaults it to `0`. The agent didn't pass an amount, so the mock Lambda echoed `$0`. The refund flow still works (refund ID, APPROVED, 3–5 day message). A fix would be to have the agent look up the order total (`get_order`) and pass it, or make `amount` required in the schema.
+The system prompt now has source-of-truth rules: prices, discounts and totals must come from a tool call in the current conversation, never from memory; the agent must look up the order total before a refund and pass it as the amount; and loyalty figures must be reported exactly as the tool returns them. Dollar amounts are now redacted from both sides of a turn before `MemoryHook` saves it to long-term memory, so an old total can't come back as `Customer Context`. The refund Lambda schema now requires `amount`, and `refund_processor.py` rejects a missing or $0 amount and any amount above the order total. The `calculate_loyalty_discount` docstring now explains the order of operations (points first, then the tier discount on what's left) and asks for the tool's figures to be reported exactly, without re-calculating or rounding. Before the final run I also cleared the stale `CUST-123` test memory left over from the earlier runs.
 
 ## Security Note
 

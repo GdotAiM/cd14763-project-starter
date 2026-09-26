@@ -1,35 +1,14 @@
-$ uv run agentcore invoke '{"prompt": "Can you track order ORD-001?", "customer_id": "CUST-123", "session_id": "t1"}' --session-id t1-runtime-session-111335-00000000000001
-╭─────────────────────────── customer_support_agent ───────────────────────────╮
-│ Session: t1-runtime-session-111335-00000000000001                            │
-│ Request ID: ce334b1d-10f3-4d64-b094-bb362508f510                             │
-│ ARN:                                                                         │
-│ arn:aws:bedrock-agentcore:us-east-1:802732818729:runtime/customer_support_ag │
-│ ent-6eDIfs3G2r                                                               │
-│ Logs: aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --follow                 │
-│       aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --since 1h               │
-│ GenAI Dashboard:                                                             │
-│ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#gen-ai-obser │
-│ vability/agent-core                                                          │
-╰──────────────────────────────────────────────────────────────────────────────╯
+$ uv run agentcore invoke '{"prompt": "Can you track order ORD-001?", "customer_id": "CUST-123"}' --session-id f1-session-1790424327-XXXXXXXXXXXXXXXXXXXXX
+[customer_support_agent | session f1-session-1790424327-XXXXXXXXXXXXXXXXXXXXX | ARN/log box trimmed]
 
 Response:
-I've found the details for your order **ORD-001**:
+Thanks for your patience, Jane. Here's the status for order **ORD-001**:
 
-**Order Status:** SHIPPED ✅  
-**Customer ID:** CUST-123  
-**Items:**
-- Wireless Headphones Pro (1 x $89.99)
+**Status:** SHIPPED
+**Item:** Wireless Headphones Pro (1 x $89.99)
+**Tracking:** TRK987654321 (UPS)
+**Estimated Delivery:** 2026-09-28
 
-**Total:** $89.99  
-**Tracking Number:** TRK987654321  
-**Carrier:** UPS  
-**Estimated Delivery:** September 28, 2026
-
-Your order is currently in transit and expected to be delivered by September 28,
-2026. You can track the package using the tracking number TRK987654321 with UPS.
+Is there anything else you'd like to know about this order?
 
 [exit code: 0]

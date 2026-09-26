@@ -1,23 +1,8 @@
-$ uv run agentcore invoke '{"prompt": "Go to https://www.udacity.com and tell me the page title.", "customer_id": "CUST-123", "session_id": "t6"}' --session-id t6-runtime-session-111720-00000000000001
-╭─────────────────────────── customer_support_agent ───────────────────────────╮
-│ Session: t6-runtime-session-111720-00000000000001                            │
-│ Request ID: b9a3e097-b560-435f-a3b5-7810367f47b8                             │
-│ ARN:                                                                         │
-│ arn:aws:bedrock-agentcore:us-east-1:802732818729:runtime/customer_support_ag │
-│ ent-6eDIfs3G2r                                                               │
-│ Logs: aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --follow                 │
-│       aws logs tail                                                          │
-│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
-│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --since 1h               │
-│ GenAI Dashboard:                                                             │
-│ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#gen-ai-obser │
-│ vability/agent-core                                                          │
-╰──────────────────────────────────────────────────────────────────────────────╯
+$ uv run agentcore invoke '{"prompt": "Go to https://www.udacity.com and tell me the page title.", "customer_id": "CUST-123"}' --session-id f6-session-1790424327-XXXXXXXXXXXXXXXXXXXXX
+[customer_support_agent | session f6-session-1790424327-XXXXXXXXXXXXXXXXXXXXX | ARN/log box trimmed]
 
 Response:
-The page title of https://www.udacity.com is **"Learn the Latest Tech Skills; 
-Advance Your Career | Udacity"**.
+The page title of https://www.udacity.com is: **"Learn the Latest Tech Skills;
+Advance Your Career | Udacity"**
 
 [exit code: 0]
