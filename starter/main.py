@@ -239,6 +239,10 @@ def calculate_loyalty_discount(
     Calculate the loyalty discount for a customer order using the
     AgentCore Code Interpreter. Runs exact arithmetic in a secure sandbox.
 
+    Order of operations: points are redeemed first (reducing the order
+    total), and the tier discount percentage is then applied to what's
+    left AFTER points -- not to the original order total.
+
     Args:
         loyalty_points: Customer's current points balance
         tier: Customer tier -- Silver, Gold, or Platinum
@@ -246,7 +250,9 @@ def calculate_loyalty_discount(
         product_category: standard, device, or fresh
 
     Returns:
-        Full discount breakdown and final price
+        Full discount breakdown and final price. Report tier_discount,
+        points_value, and final_total exactly as returned -- do not
+        recalculate or round them yourself.
     """
     code = f"""
 import json, math
@@ -365,7 +371,10 @@ Critical rules:
   disagrees with the tool.
 - Before processing any refund, first look up the order (order tracking
   tool) to get its real total, and pass that total as the refund amount.
-  Never call the refund tool with a zero or missing amount."""
+  Never call the refund tool with a zero or missing amount.
+- When calculate_loyalty_discount returns, report tier_discount,
+  points_value, and final_total exactly as the tool returned them. Never
+  recalculate, re-derive, or round these yourself."""
 
 
 
