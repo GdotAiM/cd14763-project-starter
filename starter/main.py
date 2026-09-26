@@ -1,20 +1,28 @@
 """
-Customer Support AI Agent — Starter Code
-==========================================
-Your task is to complete this file by implementing all sections marked
-with # TODO comments.
+Customer Support AI Agent (Amazon Bedrock AgentCore + Strands Agents)
+======================================================================
+A customer support agent for an Amazon-style store, served by the AgentCore
+Runtime (BedrockAgentCoreApp). It uses Amazon Nova 2 Lite via Bedrock and has:
 
-Reference the step-by-step solution files and INSTRUCTIONS.md for guidance.
-Do NOT copy the solution directly — work through each section yourself.
+- search_knowledge_base       -- RAG over the product catalog / policies (Bedrock KB)
+- calculate_loyalty_discount  -- exact loyalty maths in the AgentCore Code Interpreter
+- AgentCore Browser           -- live web lookups
+- Gateway (MCP) tools         -- order tracking and refund processing Lambdas
+- MemoryHook                  -- AgentCore long-term memory (facts + preferences)
+                                 keyed by customer_id
 
-Run locally (after filling in config values):
-    uv run main.py '{"prompt": "Hello", "customer_id": "CUST-123", "session_id": "s1"}'
+Set GATEWAY_URL, KB_ID, REGION and MEMORY_ID below before running.
 
-Deploy to AgentCore:
+Deploy with the Starter Toolkit (from starter/):
+    agentcore configure --entrypoint main.py --name <agent-name> --deployment-type direct_code_deploy --runtime PYTHON_3_13 --disable-memory
     agentcore deploy
+    uv run setup_permissions.py
 
-Invoke deployed agent:
-    agentcore invoke '{"prompt": "Hello", "customer_id": "CUST-123", "session_id": "s1"}'
+Invoke the deployed agent:
+    agentcore invoke '{"prompt": "Can you track order ORD-001?", "customer_id": "CUST-123", "session_id": "t1"}'
+
+Local CLI test: swap app.run() for main() at the bottom of this file, then
+    uv run main.py '{"prompt": "Hello", "customer_id": "CUST-123", "session_id": "s1"}'
 """
 
 # -- Imports ------------------------------------------------------------------
@@ -67,7 +75,17 @@ _bedrock_runtime = boto3.client("bedrock-agent-runtime", region_name=REGION)
 def get_namespaces(mem_client: MemoryClient, memory_id: str) -> Dict:
     """Return a dict mapping strategy type to namespace template string."""
     strategies = mem_client.get_memory_strategies(memory_id)
-    return {s["type"]: s["namespaces"][0] for s in strategies}
+    namespaces = {}
+    for s in strategies:
+        # Current API field is namespaceTemplates; namespaces is the legacy name.
+        ns = s.get("namespaceTemplates") or s.get("namespaces") or []
+        strategy_type = (
+            s.get("type") or s.get("memoryStrategyType") or s.get("strategyType")
+        )
+        if not ns or not strategy_type:
+            continue
+        namespaces[strategy_type] = ns[0]
+    return namespaces
 
 
 # -- TODO 5 -- Memory Hook ----------------------------------------------------
@@ -225,10 +243,14 @@ product_category = "{product_category}"
 earn_rates = {{"standard": 1, "device": 2, "fresh": 5}}
 tier_rates = {{"Silver": 0.00, "Gold": 0.10, "Platinum": 0.15}}
 
-points_redeemed = (loyalty_points // 500) * 500
-max_redeemable = int(order_total * 0.5)
-points_redeemed = min(points_redeemed, max_redeemable)
-points_value = points_redeemed * 0.001
+# 100 points = $1; redeem in 500-point blocks (500 minimum),
+# capped so the points value never exceeds 50% of the order total.
+POINTS_PER_DOLLAR = 100
+REDEEM_BLOCK = 500
+max_redeemable_points = int(order_total * 0.5 * POINTS_PER_DOLLAR) // REDEEM_BLOCK * REDEEM_BLOCK
+points_redeemed = (loyalty_points // REDEEM_BLOCK) * REDEEM_BLOCK
+points_redeemed = min(points_redeemed, max_redeemable_points)
+points_value = points_redeemed / POINTS_PER_DOLLAR
 
 subtotal_after_points = order_total - points_value
 tier_discount_rate = tier_rates.get(tier, 0.00)
@@ -240,10 +262,10 @@ points_earned = int(order_total * earn_rates.get(product_category, 1))
 remaining_points = loyalty_points - points_redeemed + points_earned
 
 result = {{
-    "loyalty_points_used": points_redeemed,
+    "points_redeemed": points_redeemed,
     "points_value": round(points_value, 2),
     "tier": tier,
-    "tier_discount_rate": f"{{tier_discount_rate * 100:.0f}}%",
+    "tier_discount_pct": round(tier_discount_rate * 100, 2),
     "tier_discount": round(tier_discount, 2),
     "original_total": order_total,
     "final_total": round(final_total, 2),
@@ -264,20 +286,40 @@ print(json.dumps(result, indent=2))
             })
 
             for event in response["stream"]:
-                return json.dumps(event["result"])
+                result = event.get("result", {})
+                if result.get("isError"):
+                    raise RuntimeError(f"Code Interpreter error: {result}")
+                # Prefer the sandbox's stdout; fall back to the text content blocks.
+                stdout = (result.get("structuredContent") or {}).get("stdout")
+                if not stdout:
+                    stdout = "".join(
+                        c.get("text", "")
+                        for c in result.get("content", [])
+                        if c.get("type") == "text"
+                    )
+                # Validate and re-emit the JSON the generated code printed.
+                return json.dumps(json.loads(stdout))
+
+            raise RuntimeError("Code Interpreter returned no result")
 
     except Exception as e:
+        logger.warning("Code Interpreter unavailable, using fallback: %s", e)
+        # Fallback: tier discount only, no points redeemed.
         tier_discount_rate = {"Silver": 0.00, "Gold": 0.10, "Platinum": 0.15}.get(tier, 0.00)
         tier_discount = order_total * tier_discount_rate
         final_total = order_total - tier_discount
-        remaining = loyalty_points + int(order_total * {"standard": 1, "device": 2, "fresh": 5}.get(product_category, 1))
+        points_earned = int(order_total * {"standard": 1, "device": 2, "fresh": 5}.get(product_category, 1))
         fallback = {
+            "points_redeemed": 0,
+            "points_value": 0.0,
             "tier": tier,
-            "tier_discount_rate": f"{tier_discount_rate * 100:.0f}%",
+            "tier_discount_pct": round(tier_discount_rate * 100, 2),
             "tier_discount": round(tier_discount, 2),
             "original_total": order_total,
             "final_total": round(final_total, 2),
-            "remaining_points": remaining,
+            "total_savings": round(tier_discount, 2),
+            "points_earned": points_earned,
+            "remaining_points": loyalty_points + points_earned,
             "note": "Code Interpreter unavailable; fallback tier discount applied.",
         }
         return json.dumps(fallback)
