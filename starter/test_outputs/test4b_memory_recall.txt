@@ -1,0 +1,23 @@
+$ uv run agentcore invoke '{"prompt": "Do you remember my name and communication preference?", "customer_id": "CUST-123", "session_id": "s-B"}' --session-id s-B-runtime-session-111441-0000000000001
+╭─────────────────────────── customer_support_agent ───────────────────────────╮
+│ Session: s-B-runtime-session-111441-0000000000001                            │
+│ Request ID: e1391fb0-be6f-44c0-b71b-6c1afaeccbaf                             │
+│ ARN:                                                                         │
+│ arn:aws:bedrock-agentcore:us-east-1:802732818729:runtime/customer_support_ag │
+│ ent-6eDIfs3G2r                                                               │
+│ Logs: aws logs tail                                                          │
+│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
+│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --follow                 │
+│       aws logs tail                                                          │
+│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
+│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --since 1h               │
+│ GenAI Dashboard:                                                             │
+│ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#gen-ai-obser │
+│ vability/agent-core                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Response:
+Hello Jane! Yes, I remember your name and that you prefer concise responses. How
+can I assist you today?
+
+[exit code: 0]

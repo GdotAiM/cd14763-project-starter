@@ -1,0 +1,42 @@
+$ uv run agentcore invoke '{"prompt": "I am a Gold member with 4250 points. Calculate my discount on a $150 standard order.", "customer_id": "CUST-123", "session_id": "t5"}' --session-id t5-runtime-session-111335-00000000000001
+╭─────────────────────────── customer_support_agent ───────────────────────────╮
+│ Session: t5-runtime-session-111335-00000000000001                            │
+│ Request ID: e9419caf-ece8-491f-ba8b-246847caf5cc                             │
+│ ARN:                                                                         │
+│ arn:aws:bedrock-agentcore:us-east-1:802732818729:runtime/customer_support_ag │
+│ ent-6eDIfs3G2r                                                               │
+│ Logs: aws logs tail                                                          │
+│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
+│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --follow                 │
+│       aws logs tail                                                          │
+│ /aws/bedrock-agentcore/runtimes/customer_support_agent-6eDIfs3G2r-DEFAULT    │
+│ --log-stream-name-prefix "2026/09/26/[runtime-logs" --since 1h               │
+│ GenAI Dashboard:                                                             │
+│ https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#gen-ai-obser │
+│ vability/agent-core                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Response:
+### Your Loyalty Discount Breakdown
+
+**Original Order Total:** $150.00  
+**Your Status:** Gold Member  
+**Points Available:** 4,250  
+
+#### Applied Discounts:
+- **Points Redeemed:** 4,000 points  
+- **Points Value:** $40.00  
+- **Gold Tier Discount:** 10% ($15.00)  
+
+**Total Savings:** $55.00  
+
+#### Final Total After Discounts:
+**$95.00**  
+
+#### Points Activity:
+- **Points Earned from Purchase:** 150 points  
+- **Remaining Points Balance:** 400 points  
+
+Your Gold membership provided substantial savings on this order!
+
+[exit code: 0]
