@@ -326,23 +326,15 @@ print(json.dumps(result, indent=2))
 
     except Exception as e:
         logger.warning("Code Interpreter unavailable, using fallback: %s", e)
-        # Fallback: tier discount only, no points redeemed.
-        tier_discount_rate = {"Silver": 0.00, "Gold": 0.10, "Platinum": 0.15}.get(tier, 0.00)
+        # Fallback: tier discount only (no points redemption / earn).
+        tier_rates = {"Silver": 0.00, "Gold": 0.10, "Platinum": 0.15}
+        tier_discount_rate = tier_rates.get(tier, 0.00)
         tier_discount = order_total * tier_discount_rate
-        final_total = order_total - tier_discount
-        points_earned = int(order_total * {"standard": 1, "device": 2, "fresh": 5}.get(product_category, 1))
         fallback = {
-            "points_redeemed": 0,
-            "points_value": 0.0,
             "tier": tier,
             "tier_discount_pct": round(tier_discount_rate * 100, 2),
             "tier_discount": round(tier_discount, 2),
-            "original_total": order_total,
-            "final_total": round(final_total, 2),
-            "total_savings": round(tier_discount, 2),
-            "points_earned": points_earned,
-            "remaining_points": loyalty_points + points_earned,
-            "note": "Code Interpreter unavailable; fallback tier discount applied.",
+            "note": "Code Interpreter unavailable; fallback tier discount only applied.",
         }
         return json.dumps(fallback)
 
@@ -403,13 +395,30 @@ async def invoke(payload, context=None):
 
     tools = [search_knowledge_base, calculate_loyalty_discount, agent_core_browser.browser]
 
-    client = MCPClient(
+    gateway_client = MCPClient(
         lambda: streamable_http_client(url=GATEWAY_URL)
     )
 
-    with client:
-        gateway_tools = client.list_tools_sync()
-        tools.extend(gateway_tools)
+    with gateway_client:
+        try:
+            gateway_tools = gateway_client.list_tools_sync()
+            tools.extend(gateway_tools)
+
+            logger.info(
+                "Gateway connected successfully. Loaded %d tools.",
+                len(gateway_tools),
+            )
+
+        except TimeoutError:
+            logger.exception("Gateway tool loading timed out")
+
+        except ConnectionError:
+            logger.exception("Gateway connection failed")
+
+        except Exception as exc:
+            logger.exception(
+                "Gateway tool loading failed: %s", exc
+            )
 
         agent = Agent(
             model=model,
