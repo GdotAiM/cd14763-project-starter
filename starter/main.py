@@ -38,6 +38,7 @@ from strands.hooks import (
     HookProvider, AfterInvocationEvent, HookRegistry, MessageAddedEvent,
 )
 import logging
+import re
 import uuid
 from typing import Dict
 from bedrock_agentcore.tools.code_interpreter_client import code_session
@@ -86,6 +87,18 @@ def get_namespaces(mem_client: MemoryClient, memory_id: str) -> Dict:
             continue
         namespaces[strategy_type] = ns[0]
     return namespaces
+
+
+# Matches dollar figures like "$99", "$11.50", "$1,234.56" so they can be
+# stripped out before a turn is saved to long-term memory. Memory should hold
+# who the customer is and their preferences, not calculated money figures
+# (totals, discounts, breakdown lines) that go stale the moment prices change.
+_MONEY_RE = re.compile(r"\$\s?\d[\d,]*(?:\.\d+)?")
+
+
+def _redact_money(text: str) -> str:
+    """Replace every dollar amount in text with a neutral placeholder."""
+    return _MONEY_RE.sub("[amount omitted]", text)
 
 
 # -- TODO 5 -- Memory Hook ----------------------------------------------------
@@ -162,13 +175,16 @@ class MemoryHook(HookProvider):
                     break
 
             if user_text and agent_text:
+                # Strip dollar figures (totals, discounts, breakdown lines)
+                # before persisting -- money must always come from a fresh
+                # tool call, never from a remembered turn.
                 self.memory_client.create_event(
                     memory_id=self.memory_id,
                     actor_id=self.actor_id,
                     session_id=self.session_id,
                     messages=[
-                        (user_text, "USER"),
-                        (agent_text, "ASSISTANT"),
+                        (_redact_money(user_text), "USER"),
+                        (_redact_money(agent_text), "ASSISTANT"),
                     ],
                 )
         except Exception as exc:
@@ -339,7 +355,17 @@ You have access to:
 - A browser for looking up live web information
 - Persistent memory across sessions to remember customer preferences
 Always be helpful, accurate, and professional. Use the tools available to you
-to provide the best possible support experience."""
+to provide the best possible support experience.
+
+Critical rules:
+- All prices, discounts, and totals must come from a tool call made in THIS
+  conversation (calculate_loyalty_discount, order tracking, etc.). Memory is
+  only for who the customer is and their preferences -- never trust a
+  remembered dollar figure over a fresh tool result, even if memory
+  disagrees with the tool.
+- Before processing any refund, first look up the order (order tracking
+  tool) to get its real total, and pass that total as the refund amount.
+  Never call the refund tool with a zero or missing amount."""
 
 
 

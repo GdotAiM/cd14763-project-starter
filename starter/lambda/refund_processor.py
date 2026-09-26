@@ -24,6 +24,21 @@ import string
 from datetime import datetime, timedelta, timezone
 
 
+# ── Order totals ─────────────────────────────────────────────────────────────
+# Mirrors the mock order data in order_tracker.py. The refund and order-tracker
+# tools are separate Lambdas behind separate Gateway targets, so this handler
+# can't call order_tracker directly -- it keeps its own copy of order totals
+# just to validate that a requested refund amount is sane (not $0, and not
+# more than what the customer actually paid). In a real system this would be
+# a shared database lookup instead of a duplicated table.
+def _order_totals():
+    return {
+        "ORD-001": 89.99,
+        "ORD-002": 139.99,
+        "ORD-003": 124.97,
+    }
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _new_refund_id() -> str:
@@ -62,13 +77,42 @@ def lambda_handler(event, context):
 
     # ── initiate_refund ───────────────────────────────────────────────────────
     if tool == "initiate_refund":
+        order_id = event.get("order_id")
+        amount = event.get("amount", 0)
+        order_total = _order_totals().get((order_id or "").upper())
+
+        # Refuse a refund with no real amount, or one that exceeds what was
+        # actually paid for the order. The caller (the agent) is expected to
+        # look up the order total first and pass it as `amount`.
+        if not amount or amount <= 0:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({
+                    "error": "invalid_amount",
+                    "message": "Refund amount must be greater than $0. "
+                               "Look up the order total and pass it as `amount`.",
+                    "order_id": order_id,
+                }),
+            }
+        if order_total is not None and amount > order_total:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({
+                    "error": "amount_exceeds_order_total",
+                    "message": f"Refund amount ${amount} exceeds the order total "
+                               f"(${order_total}) for {order_id}.",
+                    "order_id": order_id,
+                    "order_total": order_total,
+                }),
+            }
+
         return {
             "statusCode": 200,
             "body": json.dumps({
                 "refund_id":  _new_refund_id(),
-                "order_id":   event.get("order_id"),
+                "order_id":   order_id,
                 "status":     "APPROVED",
-                "amount":     event.get("amount", 0),   # default to 0 if not supplied
+                "amount":     amount,
                 "message":    "Refund approved. Credit appears in 3-5 business days.",
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }),
